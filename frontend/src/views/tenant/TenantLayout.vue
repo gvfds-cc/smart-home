@@ -11,6 +11,9 @@
         <el-menu-item index="/tenant/reviews" @click="$router.push('/tenant/reviews')">
           <el-icon><Star /></el-icon>我的评价
         </el-menu-item>
+        <el-menu-item index="/tenant/profile" @click="$router.push('/tenant/profile')">
+          <el-icon><User /></el-icon>个人信息
+        </el-menu-item>
       </el-menu>
       <div class="content-area">
         <router-view />
@@ -22,7 +25,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Calendar, Document, Star } from '@element-plus/icons-vue'
+import { Calendar, Document, Star, User } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)

@@ -7,6 +7,7 @@ const Contract = require('../models/Contract');
 const Setting = require('../models/Setting');
 const OperationLog = require('../models/OperationLog');
 const { authenticate, authorize } = require('../middleware/auth');
+const { maskIdCard } = require('../utils/helpers');
 
 // GET /api/admin/users - List all users
 router.get('/users', authenticate, authorize('admin'), async (req, res, next) => {
@@ -25,7 +26,13 @@ router.get('/users', authenticate, authorize('admin'), async (req, res, next) =>
     }
 
     const users = await User.find(filter).sort({ createdAt: -1 });
-    res.json(users);
+
+    const usersWithMaskedIdCard = users.map((user) => ({
+      ...user.toObject(),
+      idCard: maskIdCard(user.idCard),
+    }));
+
+    res.json(usersWithMaskedIdCard);
   } catch (err) {
     next(err);
   }

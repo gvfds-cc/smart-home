@@ -30,6 +30,9 @@
                 <el-dropdown-item v-if="auth.isTenant">
                   <router-link to="/tenant/reviews" class="dropdown-link">我的评价</router-link>
                 </el-dropdown-item>
+                <el-dropdown-item v-if="auth.isTenant">
+                  <router-link to="/tenant/profile" class="dropdown-link">个人信息</router-link>
+                </el-dropdown-item>
                 <el-dropdown-item v-if="auth.isLandlord">
                   <router-link to="/landlord/houses" class="dropdown-link">房源管理</router-link>
                 </el-dropdown-item>

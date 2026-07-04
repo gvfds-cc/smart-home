@@ -10,33 +10,72 @@ async function seed() {
 
     const User = require('./models/User');
 
-    // Check if admin already exists
     const existingAdmin = await User.findOne({ role: 'admin' });
-    if (existingAdmin) {
-      console.log('管理员账号已存在:');
-      console.log(`  手机号: ${existingAdmin.phone}`);
-      console.log(`  密码: admin123`);
+    const existingTenant = await User.findOne({ phone: '13900000001' });
+    const existingLandlord = await User.findOne({ phone: '13900000002' });
+
+    if (existingAdmin && existingTenant && existingLandlord) {
+      console.log('测试账号已存在');
       await mongoose.disconnect();
       return;
     }
 
-    const passwordHash = await bcrypt.hash('admin123', 10);
+    const passwordHash = await bcrypt.hash('123456', 10);
 
-    const admin = new User({
-      phone: '13800000000',
-      name: '系统管理员',
-      passwordHash,
-      role: 'admin',
-      status: 'active',
-    });
+    if (!existingAdmin) {
+      const admin = new User({
+        phone: '13800000000',
+        email: 'admin@example.com',
+        name: '系统管理员',
+        passwordHash,
+        role: 'admin',
+        status: 'active',
+      });
+      await admin.save();
+    }
 
-    await admin.save();
+    if (!existingTenant) {
+      const tenant = new User({
+        phone: '13900000001',
+        email: 'tenant@example.com',
+        name: '张浚杰',
+        passwordHash,
+        role: 'tenant',
+        status: 'active',
+      });
+      await tenant.save();
+    }
 
-    console.log('✅ 默认管理员账号创建成功');
+    if (!existingLandlord) {
+      const landlord = new User({
+        phone: '13900000002',
+        email: 'landlord@example.com',
+        name: '李房东',
+        passwordHash,
+        role: 'landlord',
+        status: 'active',
+      });
+      await landlord.save();
+    }
+
+    console.log('✅ 测试账号创建成功');
     console.log('━━━━━━━━━━━━━━━━━━━━━');
+    console.log('【管理员】');
     console.log('  手机号: 13800000000');
-    console.log('  密码:   admin123');
-    console.log('  角色:   管理员');
+    console.log('  邮箱:   admin@example.com');
+    console.log('  密码:   123456');
+    console.log('━━━━━━━━━━━━━━━━━━━━━');
+    console.log('【租户】');
+    console.log('  手机号: 13900000001');
+    console.log('  邮箱:   tenant@example.com');
+    console.log('  姓名:   张浚杰');
+    console.log('  密码:   123456');
+    console.log('━━━━━━━━━━━━━━━━━━━━━');
+    console.log('【房东】');
+    console.log('  手机号: 13900000002');
+    console.log('  邮箱:   landlord@example.com');
+    console.log('  姓名:   李房东');
+    console.log('  密码:   123456');
     console.log('━━━━━━━━━━━━━━━━━━━━━');
 
     await mongoose.disconnect();

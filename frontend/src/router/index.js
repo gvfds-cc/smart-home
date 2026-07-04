@@ -13,7 +13,8 @@ const routes = [
     children: [
       { path: 'appointments', name: 'MyAppointments', component: () => import('../views/tenant/MyAppointments.vue') },
       { path: 'contracts', name: 'MyContracts', component: () => import('../views/tenant/MyContracts.vue') },
-      { path: 'reviews', name: 'MyReviews', component: () => import('../views/tenant/MyReviews.vue') }
+      { path: 'reviews', name: 'MyReviews', component: () => import('../views/tenant/MyReviews.vue') },
+      { path: 'profile', name: 'MyProfile', component: () => import('../views/tenant/MyProfile.vue') }
     ]
   },
   {
