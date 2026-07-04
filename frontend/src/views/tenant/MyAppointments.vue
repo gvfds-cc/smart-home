@@ -5,12 +5,18 @@
     </div>
 
     <el-table :data="appointments" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="house?.title || '--'" label="房源" min-width="160" />
-      <el-table-column label="看房日期" width="120">
-        <template #default="{ row }">{{ formatDate(row.date) }}</template>
+      <el-table-column label="房源" min-width="160">
+        <template #default="{ row }">{{ row.houseId?.title || '--' }}</template>
       </el-table-column>
-      <el-table-column prop="time" label="时间" width="100" />
-      <el-table-column prop="note" label="备注" min-width="160" show-overflow-tooltip />
+      <el-table-column label="看房日期" width="120">
+        <template #default="{ row }">{{ formatDate(row.visitDate) }}</template>
+      </el-table-column>
+      <el-table-column label="时间" width="100">
+        <template #default="{ row }">{{ row.visitTime || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="备注" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.remark || '--' }}</template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag class="status-tag" :type="statusType(row.status)" size="small">
@@ -25,7 +31,7 @@
             type="danger"
             size="small"
             plain
-            @click="cancelAppointment(row.id)"
+            @click="cancelAppointment(row._id)"
           >取消预约</el-button>
           <span v-else class="muted-text">-</span>
         </template>
@@ -64,8 +70,8 @@ function formatDate(dateStr) {
 async function loadAppointments() {
   loading.value = true
   try {
-    const res = await request.get('/appointments/my')
-    appointments.value = res.appointments || res.data || []
+    const res = await request.get('/appointments')
+    appointments.value = Array.isArray(res) ? res : (res.appointments || res.data || [])
   } catch {
     appointments.value = []
   } finally {

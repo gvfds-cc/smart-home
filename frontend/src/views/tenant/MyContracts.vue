@@ -35,7 +35,7 @@
             v-if="row.status === 'pending_sign'"
             type="primary"
             size="small"
-            @click="signContract(row.id)"
+            @click="signContract(row._id)"
           >签署合同</el-button>
           <span v-else-if="row.status === 'signed'" class="muted-text">已签署</span>
           <span v-else class="muted-text">-</span>

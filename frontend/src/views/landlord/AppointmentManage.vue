@@ -4,11 +4,24 @@
       <h3>预约管理</h3>
     </div>
     <el-table :data="appointments" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="house?.title || '--'" label="房源" min-width="150" />
-      <el-table-column prop="user?.name || user?.phone || '--'" label="租户" width="120" />
-      <el-table-column prop="date" label="日期" width="120" />
-      <el-table-column prop="time" label="时间" width="100" />
-      <el-table-column prop="note" label="备注" min-width="150" show-overflow-tooltip />
+      <el-table-column label="房源" min-width="150">
+        <template #default="{ row }">{{ row.houseId?.title || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="租户" width="120">
+        <template #default="{ row }">{{ row.tenantId?.name || row.tenantId?.phone || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="日期" width="120">
+        <template #default="{ row }">{{ formatDate(row.visitDate) }}</template>
+      </el-table-column>
+      <el-table-column label="时间" width="100">
+        <template #default="{ row }">{{ row.visitTime || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="联系方式" width="130">
+        <template #default="{ row }">{{ row.contact || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="备注" min-width="150" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.remark || '--' }}</template>
+      </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="statusType(row.status)" size="small" class="status-tag">{{ statusText(row.status) }}</el-tag>
@@ -17,8 +30,8 @@
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'pending'">
-            <el-button type="success" size="small" @click="handleAction(row.id, 'confirmed')">确认</el-button>
-            <el-button type="danger" size="small" @click="showRejectDialog(row.id)">拒绝</el-button>
+            <el-button type="success" size="small" @click="handleAction(row._id, 'confirmed')">确认</el-button>
+            <el-button type="danger" size="small" @click="showRejectDialog(row._id)">拒绝</el-button>
           </template>
           <span v-else>-</span>
         </template>
@@ -60,11 +73,17 @@ function statusText(s) {
   return { pending: '待确认', confirmed: '已确认', cancelled: '已取消', rejected: '已拒绝' }[s] || s
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '--'
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 async function loadAppointments() {
   loading.value = true
   try {
-    const res = await request.get('/appointments/manage')
-    appointments.value = res.appointments || res.data || []
+    const res = await request.get('/appointments')
+    appointments.value = Array.isArray(res) ? res : (res.appointments || res.data || [])
   } catch {
     appointments.value = []
   } finally {

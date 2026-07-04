@@ -28,7 +28,7 @@
             <div class="info-list">
               <div class="info-row">
                 <span class="label">面积：</span>
-                <span>{{ house.area }}㎡</span>
+                <span>{{ house.size }}㎡</span>
               </div>
               <div class="info-row">
                 <span class="label">类型：</span>
@@ -79,9 +79,9 @@
 
           <el-card shadow="never" class="section-card">
             <h3>房东信息</h3>
-            <div v-if="house.landlord">
-              <p>姓名：{{ house.landlord.name || house.landlord.phone }}</p>
-              <p>电话：{{ house.landlord.phone }}</p>
+            <div v-if="house.landlordId">
+              <p>姓名：{{ house.landlordId.name || house.landlordId.phone }}</p>
+              <p>电话：{{ house.landlordId.phone }}</p>
             </div>
             <p v-else>暂无房东信息</p>
           </el-card>
@@ -96,10 +96,10 @@
             <div v-if="reviews.length === 0" class="text-center" style="padding:20px;color:#909399">
               暂无评价
             </div>
-            <div v-for="review in reviews" :key="review.id" class="review-item">
+            <div v-for="review in reviews" :key="review._id || review.id" class="review-item">
               <div class="review-header">
-                <strong>{{ review.user?.name || '匿名用户' }}</strong>
-                <el-rate v-model="review.rating" disabled :max="5" size="small" />
+                <strong>{{ review.tenantId?.name || '匿名用户' }}</strong>
+                <el-rate :model-value="review.score" disabled :max="5" size="small" />
               </div>
               <p class="review-content">{{ review.content }}</p>
               <el-divider />
@@ -157,7 +157,7 @@ const appointmentForm = ref({
 
 const avgRating = computed(() => {
   if (!reviews.value.length) return 0
-  const sum = reviews.value.reduce((s, r) => s + (r.rating || 0), 0)
+  const sum = reviews.value.reduce((s, r) => s + (r.score || 0), 0)
   return Math.round((sum / reviews.value.length) * 10) / 10
 })
 
@@ -184,8 +184,8 @@ async function loadHouse() {
   try {
     const res = await request.get(`/houses/${route.params.id}`)
     house.value = res.house || res.data || res
-    if (house.value.landlord && typeof house.value.landlord === 'string') {
-      try { house.value.landlord = JSON.parse(house.value.landlord) } catch {}
+    if (house.value.landlordId && typeof house.value.landlordId === 'string') {
+      try { house.value.landlordId = JSON.parse(house.value.landlordId) } catch {}
     }
   } catch {
     house.value = null
@@ -226,9 +226,10 @@ async function submitAppointment() {
     const timeStr = appointmentForm.value.time.toTimeString().split(' ')[0]
     await request.post('/appointments', {
       houseId: route.params.id,
-      date: dateStr,
-      time: timeStr,
-      note: appointmentForm.value.note
+      visitDate: dateStr,
+      visitTime: timeStr,
+      contact: appointmentForm.value.note || '',
+      remark: appointmentForm.value.note || ''
     })
     ElMessage.success('预约成功，等待房东确认')
     appointmentDialog.value = false

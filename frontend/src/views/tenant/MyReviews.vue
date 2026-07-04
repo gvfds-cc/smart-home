@@ -6,10 +6,12 @@
     </div>
 
     <el-table :data="reviews" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="house?.title || '--'" label="房源" min-width="160" />
+      <el-table-column label="房源" min-width="160">
+        <template #default="{ row }">{{ row.houseId?.title || '--' }}</template>
+      </el-table-column>
       <el-table-column label="评分" width="180">
         <template #default="{ row }">
-          <el-rate v-model="row.rating" disabled :max="5" void-color="#e2e6e6" />
+          <el-rate :model-value="row.score" disabled :max="5" void-color="#e2e6e6" />
         </template>
       </el-table-column>
       <el-table-column prop="content" label="评价内容" min-width="260" show-overflow-tooltip />
@@ -24,14 +26,14 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="房源" prop="houseId">
           <el-select v-model="form.houseId" placeholder="选择要评价的房源" style="width:100%">
-            <el-option v-for="h in houseOptions" :key="h.id" :label="h.title" :value="h.id" />
+            <el-option v-for="h in houseOptions" :key="h._id || h.id" :label="h.title" :value="h._id || h.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="评分" prop="rating">
-          <el-rate v-model="form.rating" :max="5" void-color="#e2e6e6" />
+        <el-form-item label="评分" prop="score">
+          <el-rate v-model="form.score" :max="5" void-color="#e2e6e6" />
         </el-form-item>
         <el-form-item label="评价" prop="content">
-          <el-input v-model="form.content" type="textarea" rows="4" placeholder="分享您的租房体验" />
+          <el-input v-model="form.content" type="textarea" :rows="4" placeholder="分享您的租房体验" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -53,7 +55,7 @@ const dialogVisible = ref(false)
 const submitLoading = ref(false)
 const houseOptions = ref([])
 
-const form = ref({ houseId: '', rating: 5, content: '' })
+const form = ref({ houseId: '', score: 5, content: '' })
 
 function formatDate(dateStr) {
   if (!dateStr) return '--'
@@ -68,7 +70,7 @@ async function loadReviews() {
   loading.value = true
   try {
     const res = await request.get('/reviews/my')
-    reviews.value = res.reviews || res.data || []
+    reviews.value = Array.isArray(res) ? res : (res.reviews || res.data || [])
   } catch {
     reviews.value = []
   } finally {
@@ -78,13 +80,13 @@ async function loadReviews() {
 
 async function loadHouses() {
   try {
-    const res = await request.get('/houses', { params: { myOnly: true } })
+    const res = await request.get('/houses')
     houseOptions.value = res.houses || res.data || []
   } catch { /* ignore */ }
 }
 
 function showCreateDialog() {
-  form.value = { houseId: '', rating: 5, content: '' }
+  form.value = { houseId: '', score: 5, content: '' }
   dialogVisible.value = true
 }
 
@@ -93,7 +95,7 @@ async function submitReview() {
   if (!form.value.content) { ElMessage.warning('请输入评价内容'); return }
   submitLoading.value = true
   try {
-    await request.post('/reviews', form.value)
+    await request.post('/reviews', { houseId: form.value.houseId, score: form.value.score, content: form.value.content })
     ElMessage.success('评价提交成功')
     dialogVisible.value = false
     loadReviews()

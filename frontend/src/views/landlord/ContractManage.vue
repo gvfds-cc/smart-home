@@ -5,11 +5,19 @@
       <el-button type="primary" @click="showCreateDialog">创建合同</el-button>
     </div>
     <el-table :data="contracts" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="house?.title || '--'" label="房源" min-width="150" />
-      <el-table-column prop="tenant?.name || tenant?.phone || '--'" label="租户" width="120" />
-      <el-table-column prop="startDate" label="开始日期" width="120" />
-      <el-table-column prop="endDate" label="结束日期" width="120" />
-      <el-table-column prop="rent" label="租金" width="110">
+      <el-table-column label="房源" min-width="150">
+        <template #default="{ row }">{{ row.houseId?.title || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="租户" width="120">
+        <template #default="{ row }">{{ row.tenantId?.name || row.tenantId?.phone || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="开始日期" width="120">
+        <template #default="{ row }">{{ formatDate(row.startDate) }}</template>
+      </el-table-column>
+      <el-table-column label="结束日期" width="120">
+        <template #default="{ row }">{{ formatDate(row.endDate) }}</template>
+      </el-table-column>
+      <el-table-column label="租金" width="110">
         <template #default="{ row }">¥{{ Number(row.rent).toLocaleString() }}</template>
       </el-table-column>
       <el-table-column label="状态" width="100">
@@ -20,11 +28,11 @@
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button
-            v-if="row.status === 'pending'"
+            v-if="row.status === 'draft' || row.status === 'pending_sign'"
             type="primary" size="small"
-            @click="signContract(row.id)"
+            @click="signContract(row._id)"
           >签署</el-button>
-          <span v-else-if="row.status === 'active'" class="status-text">生效中</span>
+          <span v-else-if="row.status === 'signed'" class="status-text">已签署</span>
           <span v-else class="status-text">-</span>
         </template>
       </el-table-column>
@@ -35,12 +43,12 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="房源" prop="houseId">
           <el-select v-model="form.houseId" placeholder="选择房源" style="width:100%">
-            <el-option v-for="h in houseOptions" :key="h.id" :label="h.title" :value="h.id" />
+            <el-option v-for="h in houseOptions" :key="h._id || h.id" :label="h.title" :value="h._id || h.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="租户" prop="tenantId">
           <el-select v-model="form.tenantId" placeholder="选择租户" style="width:100%">
-            <el-option v-for="t in tenantOptions" :key="t.id" :label="t.name || t.phone" :value="t.id" />
+            <el-option v-for="t in tenantOptions" :key="t._id || t.id" :label="t.name || t.phone" :value="t._id || t.id" />
           </el-select>
         </el-form-item>
         <el-row :gutter="20">
@@ -57,6 +65,9 @@
         </el-row>
         <el-form-item label="月租金" prop="rent">
           <el-input-number v-model="form.rent" :min="0" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="押金" prop="deposit">
+          <el-input-number v-model="form.deposit" :min="0" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -79,20 +90,29 @@ const createLoading = ref(false)
 const houseOptions = ref([])
 const tenantOptions = ref([])
 
-const form = ref({ houseId: '', tenantId: '', startDate: '', endDate: '', rent: 0 })
+const form = ref({ houseId: '', tenantId: '', startDate: '', endDate: '', rent: 0, deposit: 0 })
 
 function statusType(s) {
-  return { pending: 'warning', active: 'success', expired: 'info', terminated: 'danger' }[s] || 'info'
+  return { draft: 'info', pending_sign: 'warning', signed: 'success', terminated: 'danger' }[s] || 'info'
 }
 function statusText(s) {
-  return { pending: '待签署', active: '生效中', expired: '已到期', terminated: '已终止' }[s] || s
+  return { draft: '草稿', pending_sign: '待签署', signed: '已签署', terminated: '已终止' }[s] || s
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '--'
+  const d = new Date(dateStr)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 async function loadContracts() {
   loading.value = true
   try {
-    const res = await request.get('/contracts/manage')
-    contracts.value = res.contracts || res.data || []
+    const res = await request.get('/contracts')
+    contracts.value = Array.isArray(res) ? res : (res.contracts || res.data || [])
   } catch {
     contracts.value = []
   } finally {
@@ -102,17 +122,19 @@ async function loadContracts() {
 
 async function loadOptions() {
   try {
-    const [hRes, tRes] = await Promise.all([
-      request.get('/houses/my'),
-      request.get('/users', { params: { role: 'tenant' } })
-    ])
-    houseOptions.value = hRes.houses || hRes.data || []
-    tenantOptions.value = tRes.users || tRes.data || []
-  } catch {}
+    const hRes = await request.get('/houses/my')
+    houseOptions.value = Array.isArray(hRes) ? hRes : (hRes.houses || hRes.data || [])
+    // Load tenants via admin route (landlord needs admin privileges to list tenants)
+    // Fallback: just show houses without tenant filter
+    const tRes = await request.get('/admin/users', { params: { role: 'tenant' } })
+    tenantOptions.value = Array.isArray(tRes) ? tRes : (tRes.users || tRes.data || [])
+  } catch {
+    tenantOptions.value = []
+  }
 }
 
 function showCreateDialog() {
-  form.value = { houseId: '', tenantId: '', startDate: '', endDate: '', rent: 0 }
+  form.value = { houseId: '', tenantId: '', startDate: '', endDate: '', rent: 0, deposit: 0 }
   dialogVisible.value = true
 }
 

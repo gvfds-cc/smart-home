@@ -26,8 +26,8 @@
       <el-col :span="6">
         <el-card shadow="never">
           <div class="stat-item">
-            <div class="stat-label">总合同数</div>
-            <div class="stat-value stat-count">{{ totalContracts }}</div>
+            <div class="stat-label">记录数</div>
+            <div class="stat-value stat-count">{{ records.length }}</div>
           </div>
         </el-card>
       </el-col>
@@ -50,20 +50,26 @@
     </el-row>
 
     <el-table :data="records" v-loading="loading" stripe style="width:100%">
-      <el-table-column prop="house?.title || '--'" label="房源" min-width="150" />
-      <el-table-column prop="tenant?.name || tenant?.phone || '--'" label="租户" width="120" />
+      <el-table-column label="房源" min-width="150">
+        <template #default="{ row }">{{ row.houseId?.title || '--' }}</template>
+      </el-table-column>
+      <el-table-column label="合同" min-width="120">
+        <template #default="{ row }">{{ row.contractId?._id?.slice(-6) || '--' }}</template>
+      </el-table-column>
       <el-table-column prop="month" label="月份" width="100" />
-      <el-table-column prop="amount" label="金额" width="110">
+      <el-table-column label="金额" width="110">
         <template #default="{ row }">¥{{ Number(row.amount).toLocaleString() }}</template>
       </el-table-column>
       <el-table-column label="支付状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.paid ? 'success' : 'warning'" size="small" class="status-tag">
-            {{ row.paid ? '已支付' : '未支付' }}
+          <el-tag :type="row.status === 'paid' ? 'success' : 'warning'" size="small" class="status-tag">
+            {{ row.status === 'paid' ? '已支付' : '未支付' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="paidAt" label="支付时间" width="160" />
+      <el-table-column label="创建时间" width="160">
+        <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+      </el-table-column>
     </el-table>
     <el-empty v-if="!loading && records.length === 0" description="暂无财务记录" />
 
@@ -71,7 +77,7 @@
       <el-form :model="addForm" label-width="80px">
         <el-form-item label="房源" prop="houseId">
           <el-select v-model="addForm.houseId" placeholder="选择房源" style="width:100%">
-            <el-option v-for="h in houseOptions" :key="h.id" :label="h.title" :value="h.id" />
+            <el-option v-for="h in houseOptions" :key="h._id || h.id" :label="h.title" :value="h._id || h.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="金额" prop="amount">
@@ -79,9 +85,6 @@
         </el-form-item>
         <el-form-item label="月份" prop="month">
           <el-date-picker v-model="addForm.month" type="month" placeholder="选择月份" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="已支付">
-          <el-switch v-model="addForm.paid" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -103,12 +106,20 @@ const month = ref(new Date())
 const addDialogVisible = ref(false)
 const addLoading = ref(false)
 const houseOptions = ref([])
-const addForm = ref({ houseId: '', amount: 0, month: new Date(), paid: false })
+const addForm = ref({ houseId: '', amount: 0, month: new Date() })
 
 const totalIncome = computed(() => records.value.reduce((s, r) => s + (Number(r.amount) || 0), 0))
-const totalContracts = computed(() => records.value.length)
-const paidIncome = computed(() => records.value.filter(r => r.paid).reduce((s, r) => s + (Number(r.amount) || 0), 0))
+const paidIncome = computed(() => records.value.filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.amount) || 0), 0))
 const pendingIncome = computed(() => totalIncome.value - paidIncome.value)
+
+function formatDate(dateStr) {
+  if (!dateStr) return '--'
+  const d = new Date(dateStr)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 async function loadFinance() {
   loading.value = true
@@ -119,7 +130,7 @@ async function loadFinance() {
       params.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     }
     const res = await request.get('/finance', { params })
-    records.value = res.records || res.data || []
+    records.value = Array.isArray(res) ? res : (res.records || res.data || [])
   } catch {
     records.value = []
   } finally {
@@ -130,12 +141,12 @@ async function loadFinance() {
 async function loadHouseOptions() {
   try {
     const res = await request.get('/houses/my')
-    houseOptions.value = res.houses || res.data || []
+    houseOptions.value = Array.isArray(res) ? res : (res.houses || res.data || [])
   } catch {}
 }
 
 function showAddDialog() {
-  addForm.value = { houseId: '', amount: 0, month: new Date(), paid: false }
+  addForm.value = { houseId: '', amount: 0, month: new Date() }
   addDialogVisible.value = true
 }
 
@@ -147,9 +158,11 @@ async function submitAddRecord() {
   addLoading.value = true
   try {
     const d = addForm.value.month
+    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     await request.post('/finance', {
-      ...addForm.value,
-      month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      houseId: addForm.value.houseId,
+      amount: addForm.value.amount,
+      month: monthStr
     })
     ElMessage.success('财务记录已添加')
     addDialogVisible.value = false

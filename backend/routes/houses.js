@@ -234,4 +234,29 @@ router.put('/:id/review', authenticate, authorize('admin'), async (req, res, nex
   }
 });
 
+// PUT /api/houses/:id/status - Toggle on/offline (landlord)
+router.put('/:id/status', authenticate, authorize('landlord'), async (req, res, next) => {
+  try {
+    const { status } = req.body;
+
+    if (!['approved', 'offline'].includes(status)) {
+      return res.status(400).json({ message: '状态值无效' });
+    }
+
+    const house = await House.findById(req.params.id);
+    if (!house) {
+      return res.status(404).json({ message: '房源不存在' });
+    }
+    if (house.landlordId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: '无权操作此房源' });
+    }
+
+    house.status = status;
+    await house.save();
+    res.json({ message: status === 'approved' ? '已上架' : '已下架' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
