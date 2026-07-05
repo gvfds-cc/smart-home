@@ -4,6 +4,7 @@ const contractSchema = new mongoose.Schema({
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   houseId: { type: mongoose.Schema.Types.ObjectId, ref: 'House', required: true },
+  appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   rent: { type: Number, required: true },

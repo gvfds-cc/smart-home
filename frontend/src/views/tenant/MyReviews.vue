@@ -28,6 +28,9 @@
           <el-select v-model="form.houseId" placeholder="选择要评价的房源" style="width:100%">
             <el-option v-for="h in houseOptions" :key="h._id || h.id" :label="h.title" :value="h._id || h.id" />
           </el-select>
+          <div v-if="houseOptions.length === 0" style="font-size:12px;color:#c0c5c5;margin-top:4px;">
+            暂无可评价的房源，预约成功后才能评价
+          </div>
         </el-form-item>
         <el-form-item label="评分" prop="score">
           <el-rate v-model="form.score" :max="5" void-color="#e2e6e6" />
@@ -78,11 +81,13 @@ async function loadReviews() {
   }
 }
 
-async function loadHouses() {
+async function loadAvailableHouses() {
   try {
-    const res = await request.get('/houses')
-    houseOptions.value = res.houses || res.data || []
-  } catch { /* ignore */ }
+    const res = await request.get('/reviews/available-houses')
+    houseOptions.value = Array.isArray(res) ? res : (res.houses || res.data || [])
+  } catch {
+    houseOptions.value = []
+  }
 }
 
 function showCreateDialog() {
@@ -99,13 +104,16 @@ async function submitReview() {
     ElMessage.success('评价提交成功')
     dialogVisible.value = false
     loadReviews()
-  } catch { /* handled */ } finally {
+  } catch (err) {
+    console.error('提交评价失败:', err)
+    // 错误消息已由请求拦截器显示
+  } finally {
     submitLoading.value = false
   }
 }
 
 onMounted(() => {
   loadReviews()
-  loadHouses()
+  loadAvailableHouses()
 })
 </script>

@@ -24,7 +24,7 @@ request.interceptors.response.use(
         localStorage.removeItem('user')
         window.location.href = '/login'
       } else if (status === 403) {
-        ElMessage.error('没有权限执行此操作')
+        ElMessage.error(data?.message || '没有权限执行此操作')
       } else if (status === 422) {
         ElMessage.error(data?.message || '数据验证失败')
       } else {

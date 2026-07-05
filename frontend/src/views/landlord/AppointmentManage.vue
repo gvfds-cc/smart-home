@@ -62,11 +62,14 @@
           <el-tag :type="statusType(row.status)" size="small" class="status-tag" effect="dark">{{ statusText(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="240" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'pending'">
-            <el-button type="success" size="small" class="action-btn" @click="handleAction(row._id || row.id, 'confirmed')">确认</el-button>
+            <el-button type="success" size="small" class="action-btn" @click="confirmAppointment(row._id || row.id)">确认</el-button>
             <el-button type="danger" size="small" class="action-btn" @click="showRejectDialog(row._id || row.id)">拒绝</el-button>
+          </template>
+          <template v-else-if="row.status === 'confirmed'">
+            <el-button type="primary" size="small" class="action-btn" @click="showContractDialog(row)">创建合同</el-button>
           </template>
           <span v-else class="cell-done">—</span>
         </template>
@@ -95,6 +98,42 @@
         <el-button type="primary" @click="submitReject" :loading="rejectLoading">确定拒绝</el-button>
       </template>
     </el-dialog>
+
+    <!-- Create Contract Dialog (from confirmed appointment) -->
+    <el-dialog v-model="contractDialogVisible" title="创建合同" width="520px" class="contract-dialog">
+      <div v-if="contractAppointment" class="contract-preview">
+        <p class="preview-hint">基于已确认的预约创建租赁合同</p>
+        <div class="preview-info">
+          <div class="preview-row"><label>房源</label><span>{{ contractAppointment.houseId?.title || '--' }}</span></div>
+          <div class="preview-row"><label>地址</label><span>{{ contractAppointment.houseId?.address || '--' }}</span></div>
+          <div class="preview-row"><label>租户</label><span>{{ contractAppointment.tenantId?.name || contractAppointment.tenantId?.phone || '--' }}</span></div>
+        </div>
+        <el-form :model="contractForm" label-width="80px" style="margin-top:16px">
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="开始日期">
+                <el-date-picker v-model="contractForm.startDate" type="date" placeholder="开始日期" style="width:100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="结束日期">
+                <el-date-picker v-model="contractForm.endDate" type="date" placeholder="结束日期" style="width:100%" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="月租金">
+            <el-input-number v-model="contractForm.rent" :min="0" style="width:100%" />
+          </el-form-item>
+          <el-form-item label="押金">
+            <el-input-number v-model="contractForm.deposit" :min="0" style="width:100%" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="contractDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitCreateContract" :loading="contractLoading">创建合同</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -109,6 +148,12 @@ const rejectDialogVisible = ref(false)
 const rejectReason = ref('')
 const rejectId = ref(null)
 const rejectLoading = ref(false)
+
+// 合同创建相关
+const contractDialogVisible = ref(false)
+const contractAppointment = ref(null)
+const contractLoading = ref(false)
+const contractForm = ref({ startDate: '', endDate: '', rent: 0, deposit: 0 })
 
 const counts = computed(() => ({
   pending: appointments.value.filter(a => a.status === 'pending').length,
@@ -136,8 +181,8 @@ async function loadAppointments() {
     const list = res.appointments || res.data || (Array.isArray(res) ? res : [])
     if (list.length > 0) {
       appointments.value = list
-    } else {
-      // 后端无数据时展示样例预约
+    } else if (appointments.value.length === 0) {
+      // 后端无数据时展示样例预约（仅首次加载时）
       appointments.value = [
         { _id: 'apt-1', houseId: { title: '朝阳大悦城 · 精装两居室' }, tenantId: { name: '张三', phone: '138****1234' }, visitDate: '2026-07-06', visitTime: '14:00', contact: '138****1234', remark: '周末方便看房，希望房主在', status: 'pending' },
         { _id: 'apt-2', houseId: { title: '海淀中关村 · 高端公寓' }, tenantId: { name: '李四', phone: '139****5678' }, visitDate: '2026-07-05', visitTime: '10:30', contact: '139****5678', remark: '', status: 'confirmed' },
@@ -153,17 +198,19 @@ async function loadAppointments() {
   }
 }
 
-async function handleAction(id, action) {
+async function confirmAppointment(id) {
   if (String(id).startsWith('apt-')) {
     const item = appointments.value.find(a => (a._id || a.id) === id)
-    if (item) { item.status = action; ElMessage.success(action === 'confirmed' ? '已确认该预约' : '已拒绝该预约') }
+    if (item) { item.status = 'confirmed'; ElMessage.success('已确认该预约') }
     return
   }
   try {
-    await request.put(`/appointments/${id}/${action === 'confirmed' ? 'confirm' : 'reject'}`)
-    ElMessage.success(action === 'confirmed' ? '已确认该预约' : '已拒绝该预约')
+    await request.put(`/appointments/${id}/confirm`)
+    ElMessage.success('已确认该预约')
     loadAppointments()
-  } catch {}
+  } catch (err) {
+    console.error('确认预约失败:', err)
+  }
 }
 
 function showRejectDialog(id) {
@@ -180,8 +227,57 @@ async function submitReject() {
       await request.put(`/appointments/${rejectId.value}/reject`, { reason: rejectReason.value })
       ElMessage.success('已拒绝该预约')
     }
-    rejectDialogVisible.value = false; loadAppointments()
-  } catch {} finally { rejectLoading.value = false }
+    rejectDialogVisible.value = false
+    loadAppointments()
+  } catch (err) {
+    console.error('拒绝预约失败:', err)
+    // 错误消息已由请求拦截器显示
+  } finally {
+    rejectLoading.value = false
+  }
+}
+
+function showContractDialog(appointment) {
+  contractAppointment.value = appointment
+  // 预填：用预约日期作为开始日期，默认一年租期，租金从房源信息读取
+  const startDate = appointment.visitDate ? new Date(appointment.visitDate) : new Date()
+  const endDate = new Date(startDate)
+  endDate.setFullYear(endDate.getFullYear() + 1)
+  contractForm.value = {
+    startDate,
+    endDate,
+    rent: appointment.houseId?.rent || 0,
+    deposit: appointment.houseId?.deposit || 0,
+  }
+  contractDialogVisible.value = true
+}
+
+async function submitCreateContract() {
+  if (!contractForm.value.startDate || !contractForm.value.endDate) {
+    ElMessage.warning('请选择合同起止日期')
+    return
+  }
+  contractLoading.value = true
+  try {
+    const aptId = contractAppointment.value._id || contractAppointment.value.id
+    await request.post(`/contracts/from-appointment/${aptId}`, {
+      startDate: contractForm.value.startDate instanceof Date
+        ? contractForm.value.startDate.toISOString().split('T')[0]
+        : contractForm.value.startDate,
+      endDate: contractForm.value.endDate instanceof Date
+        ? contractForm.value.endDate.toISOString().split('T')[0]
+        : contractForm.value.endDate,
+      rent: contractForm.value.rent,
+      deposit: contractForm.value.deposit,
+    })
+    ElMessage.success('合同创建成功，请在合同管理中查看')
+    contractDialogVisible.value = false
+    loadAppointments()
+  } catch (err) {
+    console.error('创建合同失败:', err)
+  } finally {
+    contractLoading.value = false
+  }
 }
 
 onMounted(loadAppointments)
@@ -223,4 +319,21 @@ onMounted(loadAppointments)
 .empty-card svg { margin-bottom: 14px; opacity: 0.5; }
 .empty-card p { font-size: 15px; margin-bottom: 6px; color: #6b7272; }
 .empty-hint  { font-size: 13px; color: #c0c5c5; }
+
+/* ── Contract Preview Dialog ── */
+.contract-preview .preview-hint {
+  font-size: 13px; color: #6b7272; margin-bottom: 12px;
+}
+.preview-info {
+  background: #f7f9f9; border: 1px solid #e2e6e6; border-radius: 8px; padding: 14px 16px;
+}
+.preview-row {
+  display: flex; gap: 12px; padding: 4px 0; font-size: 13px;
+}
+.preview-row label {
+  color: #6b7272; min-width: 48px;
+}
+.preview-row span {
+  color: #1a1c1c; font-weight: 500;
+}
 </style>
