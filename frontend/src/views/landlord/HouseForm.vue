@@ -67,20 +67,35 @@
           </el-select>
         </el-form-item>
         <el-form-item label="房屋图片" prop="images">
-          <div class="flex-row">
-            <el-input v-model="imageInput" placeholder="输入图片URL后点击添加" style="width:420px" class="mr-10" />
-            <el-button @click="addImage" class="add-image-btn">添加图片</el-button>
-          </div>
-          <div class="image-list" v-if="form.images.length">
-            <el-tag
-              v-for="(img, idx) in form.images"
-              :key="idx"
-              closable
-              @close="form.images.splice(idx, 1)"
-              class="image-tag"
-            >
-              {{ img.substring(0, 40) }}...
-            </el-tag>
+          <div class="upload-area">
+            <div class="image-preview-list">
+              <div
+                v-for="(img, idx) in form.images"
+                :key="idx"
+                class="image-preview-item"
+              >
+                <img :src="img" class="preview-img" />
+                <div class="preview-mask" @click="removeImage(idx)">
+                  <el-icon><Delete /></el-icon>
+                </div>
+              </div>
+              <label
+                v-if="form.images.length < 4"
+                class="upload-trigger"
+                :class="{ 'is-uploading': isUploading }"
+              >
+                <input
+                  type="file"
+                  hidden
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                  @change="handleFileChange"
+                  :disabled="isUploading"
+                />
+                <el-icon v-if="!isUploading"><Plus /></el-icon>
+                <el-icon v-else class="is-loading"><Loading /></el-icon>
+              </label>
+            </div>
+            <div class="upload-tip">支持 jpg/png/gif/webp 格式，单张不超过 10MB，最多 4 张</div>
           </div>
         </el-form-item>
         <el-form-item label="描述" prop="description">
@@ -101,6 +116,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Plus, Delete, Loading } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 
 const route = useRoute()
@@ -108,7 +124,7 @@ const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
 const submitLoading = ref(false)
-const imageInput = ref('')
+const isUploading = ref(false)
 
 const isEdit = computed(() => !!route.params.id)
 
@@ -132,11 +148,32 @@ const rules = {
   address: [{ required: true, message: '请输入地址', trigger: 'blur' }]
 }
 
-function addImage() {
-  if (imageInput.value && !form.images.includes(imageInput.value)) {
-    form.images.push(imageInput.value)
-    imageInput.value = ''
+// 文件选择后自动上传到后端
+async function handleFileChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.error('图片大小不能超过 10MB')
+    e.target.value = ''
+    return
   }
+  const formData = new FormData()
+  formData.append('file', file)
+  isUploading.value = true
+  try {
+    const res = await request.post('/upload', formData)
+    form.images.push(res.url)
+  } catch {
+    // 错误已在拦截器中处理
+  } finally {
+    isUploading.value = false
+    e.target.value = ''
+  }
+}
+
+// 移除图片
+function removeImage(idx) {
+  form.images.splice(idx, 1)
 }
 
 async function loadHouse() {
@@ -184,28 +221,85 @@ onMounted(loadHouse)
 }
 .form-card-wrapper :deep(.el-card__body) { padding: 32px 36px; }
 
-.image-list {
-  margin-top: 12px;
+.upload-area {
+  width: 100%;
+}
+
+.image-preview-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.image-tag {
-  max-width: 200px; overflow: hidden;
-  border: none; border-radius: 6px;
-  font-size: 12px;
-  background: linear-gradient(135deg, #d9f2f2, #e8f5f5);
+
+.image-preview-item {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #e4e8e8;
+  cursor: pointer;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.image-preview-item:hover .preview-mask {
+  opacity: 1;
+}
+
+.upload-trigger {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  border: 2px dashed #c0c8c8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #a0a8a8;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+.upload-trigger:hover {
+  border-color: #1d4359;
   color: #1d4359;
 }
-.mr-10 { margin-right: 12px; }
-.flex-row { display: flex; align-items: center; }
-
-.add-image-btn {
-  color: #1d4359; border-color: #a8d8d8; font-weight: 500;
-  transition: all 200ms ease;
+.upload-trigger.is-uploading {
+  cursor: not-allowed;
+  pointer-events: none;
 }
-.add-image-btn:hover {
-  color: #fff; background: #1d4359; border-color: #1d4359;
+
+.is-loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.upload-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
 }
 
 .submit-btn { min-width: 130px; }

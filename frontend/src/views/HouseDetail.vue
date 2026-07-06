@@ -7,21 +7,44 @@
     <div v-loading="loading" v-if="house">
       <el-row :gutter="28">
         <el-col :span="16">
-          <div class="image-wrapper">
-            <div class="image-frame">
+          <div class="image-wrapper" v-if="house.images && house.images.length">
+            <div class="main-image-frame">
               <el-image
-                v-if="house.images && house.images.length"
-                :src="house.images[0]"
+                :src="house.images[currentImage]"
                 fit="cover"
                 class="detail-image"
               />
-              <div v-else class="detail-image-placeholder">
-                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#b6e4e4" stroke-width="1.0">
-                  <path d="M3 9.5L12 3L21 9.5V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.5Z"/>
-                  <path d="M9 21V13H15V21" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>暂无图片</span>
+              <!-- 左右箭头 -->
+              <template v-if="house.images.length > 1">
+                <div class="arrow arrow-left" @click="prevImage">
+                  <el-icon><ArrowLeft /></el-icon>
+                </div>
+                <div class="arrow arrow-right" @click="nextImage">
+                  <el-icon><ArrowRight /></el-icon>
+                </div>
+                <div class="image-counter">{{ currentImage + 1 }} / {{ house.images.length }}</div>
+              </template>
+            </div>
+            <!-- 缩略图列表 -->
+            <div class="thumbnail-list" v-if="house.images.length > 1">
+              <div
+                v-for="(img, idx) in house.images"
+                :key="idx"
+                class="thumbnail-item"
+                :class="{ active: idx === currentImage }"
+                @click="currentImage = idx"
+              >
+                <img :src="img" class="thumbnail-img" />
               </div>
+            </div>
+          </div>
+          <div v-else class="image-wrapper">
+            <div class="detail-image-placeholder">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#b6e4e4" stroke-width="1.0">
+                <path d="M3 9.5L12 3L21 9.5V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.5Z"/>
+                <path d="M9 21V13H15V21" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>暂无图片</span>
             </div>
           </div>
         </el-col>
@@ -183,7 +206,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import request from '../utils/request'
 import { useAuthStore } from '../stores/auth'
 
@@ -196,6 +219,7 @@ const reviews = ref([])
 const loading = ref(false)
 const apptLoading = ref(false)
 const appointmentDialog = ref(false)
+const currentImage = ref(0)
 
 const appointmentForm = ref({ date: '', time: '', note: '' })
 
@@ -229,6 +253,20 @@ function parseFacilities(f) {
     try { return JSON.parse(f) } catch { return f.split(/[,，、\s]+/).filter(Boolean) }
   }
   return []
+}
+
+function prevImage() {
+  const len = house.value?.images?.length || 0
+  if (len > 1) {
+    currentImage.value = (currentImage.value - 1 + len) % len
+  }
+}
+
+function nextImage() {
+  const len = house.value?.images?.length || 0
+  if (len > 1) {
+    currentImage.value = (currentImage.value + 1) % len
+  }
 }
 
 async function loadHouse() {
@@ -274,14 +312,15 @@ onMounted(() => { loadHouse(); loadReviews() })
 }
 .back-btn:hover { color: #1d4359; }
 
-/* ── Image ── */
+/* ── Image Gallery ── */
 .image-wrapper {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(29, 67, 89, 0.06);
 }
 
-.image-frame {
+.main-image-frame {
+  position: relative;
   border-radius: 16px;
   overflow: hidden;
 }
@@ -293,8 +332,74 @@ onMounted(() => { loadHouse(); loadReviews() })
   transition: transform 600ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-.detail-image:hover {
-  transform: scale(1.02);
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1d4359;
+  font-size: 18px;
+  z-index: 2;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.arrow:hover {
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+.arrow-left { left: 12px; }
+.arrow-right { right: 12px; }
+
+.image-counter {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  z-index: 2;
+}
+
+.thumbnail-list {
+  display: flex;
+  gap: 8px;
+  padding: 12px 4px 4px;
+  overflow-x: auto;
+}
+
+.thumbnail-item {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  opacity: 0.6;
+}
+.thumbnail-item.active {
+  border-color: #1d4359;
+  opacity: 1;
+}
+.thumbnail-item:hover {
+  opacity: 1;
+}
+
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .detail-image-placeholder {
@@ -308,6 +413,7 @@ onMounted(() => { loadHouse(); loadReviews() })
   gap: 14px;
   color: #a8d8d8;
   font-size: 15px;
+  border-radius: 16px;
 }
 
 /* ── Info Card ── */

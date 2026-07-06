@@ -1,0 +1,1901 @@
+{
+  "info": {
+    "name": "智慧房屋租赁系统 — 功能测试（不含Auth）",
+    "description": "后端全部非Auth模块的功能测试集合。\n\n🔑 开箱即用：运行 Collection Runner 即可自动完成认证（注册+登录）。\n\n📋 使用的测试账号：\n  Admin:  13834080231 / admin123456   (insert-admin.js)\n  Landlord (主):  13910000001 / 123456  赵建国 (seed-houses.js, 有3套房)\n  Landlord2:      13910000002 / 123456  钱小梅 (seed-houses.js, 有2套房, 用于越权测试)\n  Tenant:  动态注册 (系统自动创建，3个租客全部通过注册产生)\n  \n⚠️ 已弃用的 seed.js 账号(13800000000/13900000001/13900000002)不再使用。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔑 登录初始化",
+      "description": "⚠️ 必须首先执行！admin + 2个房东登录，3个租客动态注册+登录。运行 Runner 时确保此文件夹在最前面。",
+      "item": [
+        {
+          "name": "POST Admin 登录 (13834080231)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Admin 登录成功 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('adminToken', json.token);",
+                  "    pm.collectionVariables.set('adminId', json.user.id);",
+                  "    console.log('✅ Admin token 已保存');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13834080231\",\"password\":\"admin123456\",\"role\":\"admin\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "POST Landlord 登录 — 赵建国",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Landlord 登录成功 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('landlordToken', json.token);",
+                  "    pm.collectionVariables.set('landlordId', json.user.id);",
+                  "    console.log('✅ Landlord 赵建国 token 已保存');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13910000001\",\"password\":\"123456\",\"role\":\"landlord\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "POST Landlord2 登录 — 钱小梅 (越权测试用)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Landlord2 登录成功 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('landlord2Token', json.token);",
+                  "    pm.collectionVariables.set('landlord2Id', json.user.id);",
+                  "    console.log('✅ Landlord2 钱小梅 token 已保存');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13910000002\",\"password\":\"123456\",\"role\":\"landlord\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "🆕 注册 Tenant1 — 主测试租客",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    // 首次运行：注册成功",
+                  "    pm.collectionVariables.set('tenantToken', json.token);",
+                  "    pm.collectionVariables.set('tenantId', json.user.id);",
+                  "    pm.collectionVariables.set('tenantPhone', '13920000001');",
+                  "    console.log('✅ Tenant1 注册成功');",
+                  "} else if (pm.response.code === 400) {",
+                  "    // 重复运行：已存在，后续登录请求会获取token",
+                  "    console.log('↻ Tenant1 已存在，等待登录...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000001\",\"email\":\"tenant1@test.com\",\"password\":\"123456\",\"name\":\"测试租客一\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST Tenant1 登录 (已存在时获取token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('tenantToken')) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test('Tenant1 登录 200', () => pm.response.to.have.status(200));",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.collectionVariables.set('tenantToken', json.token);",
+                  "        pm.collectionVariables.set('tenantId', json.user.id);",
+                  "        console.log('✅ Tenant1 token (via login) 已保存');",
+                  "    }",
+                  "} else {",
+                  "    console.log('⏭ Tenant1 已有token, 跳过');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000001\",\"password\":\"123456\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "🆕 注册 Tenant2 — 越权测试租客",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('tenant2Token', json.token);",
+                  "    pm.collectionVariables.set('tenant2Id', json.user.id);",
+                  "    console.log('✅ Tenant2 注册成功');",
+                  "} else if (pm.response.code === 400) {",
+                  "    console.log('↻ Tenant2 已存在，等待登录...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000002\",\"email\":\"tenant2@test.com\",\"password\":\"123456\",\"name\":\"测试租客二\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST Tenant2 登录 (已存在时获取token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('tenant2Token')) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test('Tenant2 登录 200', () => pm.response.to.have.status(200));",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.collectionVariables.set('tenant2Token', json.token);",
+                  "        pm.collectionVariables.set('tenant2Id', json.user.id);",
+                  "        console.log('✅ Tenant2 token (via login) 已保存');",
+                  "    }",
+                  "} else {",
+                  "    console.log('⏭ Tenant2 已有token, 跳过');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000002\",\"password\":\"123456\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "🆕 注册 OtherTenant — 第三个越权租客",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('otherTenantToken', json.token);",
+                  "    pm.collectionVariables.set('otherTenantId', json.user.id);",
+                  "    console.log('✅ OtherTenant 注册成功');",
+                  "} else if (pm.response.code === 400) {",
+                  "    console.log('↻ OtherTenant 已存在，等待登录...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000003\",\"email\":\"other@test.com\",\"password\":\"123456\",\"name\":\"其他租客\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST OtherTenant 登录 (已存在时获取token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('otherTenantToken')) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test('OtherTenant 登录 200', () => pm.response.to.have.status(200));",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.collectionVariables.set('otherTenantToken', json.token);",
+                  "        pm.collectionVariables.set('otherTenantId', json.user.id);",
+                  "        console.log('✅ OtherTenant token (via login) 已保存');",
+                  "    }",
+                  "} else {",
+                  "    console.log('⏭ OtherTenant 已有token, 跳过');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13920000003\",\"password\":\"123456\",\"role\":\"tenant\"}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "🔍 验证 — Admin Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin token 有效 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "🔍 验证 — Landlord Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Landlord token 有效 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "🔍 验证 — Tenant Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Tenant token 有效 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💚 Health 健康检查",
+      "item": [
+        {
+          "name": "GET 健康检查",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = ok', () => pm.expect(pm.response.json().status).to.eql('ok'));",
+                  "pm.test('含 time 字段', () => pm.expect(pm.response.json()).to.have.property('time'));",
+                  "pm.test('响应时间 < 2000ms', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏘️ Houses 房屋",
+      "description": "房屋模块：列表、详情、发布、编辑、审核、上下架、软删除。使用赵建国(13910000001)已有 approved 房源。",
+      "item": [
+        {
+          "name": "GET 房源列表（公开）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('含 houses(数组) + total + page + limit', () => {",
+                  "    pm.expect(json.houses).to.be.an('array');",
+                  "    pm.expect(json.total).to.be.a('number');",
+                  "    pm.expect(json.page).to.be.a('number');",
+                  "    pm.expect(json.limit).to.be.a('number');",
+                  "});",
+                  "pm.test('全部 status = approved', () => {",
+                  "    json.houses.forEach(h => pm.expect(h.status).to.eql('approved'));",
+                  "});",
+                  "if (json.houses.length > 0 && !pm.collectionVariables.get('houseId')) {",
+                  "    pm.collectionVariables.set('houseId', json.houses[0]._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/houses?page=1&limit=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["houses"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "12" }]
+            }
+          }
+        },
+        {
+          "name": "GET 房源列表（关键词搜索）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json().houses).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/houses?keyword=精装",
+              "host": ["{{baseUrl}}"],
+              "path": ["houses"],
+              "query": [{ "key": "keyword", "value": "精装" }]
+            }
+          }
+        },
+        {
+          "name": "GET 房源详情",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('含完整字段', () => {",
+                  "    pm.expect(json).to.have.property('title');",
+                  "    pm.expect(json).to.have.property('rent');",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('landlordId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/houses/{{houseId}}", "host": ["{{baseUrl}}"], "path": ["houses", "{{houseId}}"] }
+          }
+        },
+        {
+          "name": "GET 房源详情 — 不存在的ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 404', () => pm.response.to.have.status(404));",
+                  "pm.test('消息含\"不存在\"', () => pm.expect(pm.response.json().message).to.include('不存在'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/houses/000000000000000000000000", "host": ["{{baseUrl}}"], "path": ["houses", "000000000000000000000000"] }
+          }
+        },
+        {
+          "name": "GET 我的房源 — 赵建国 (应≥3套)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('返回数组，赵建国至少3套', () => {",
+                  "    pm.expect(arr).to.be.an('array');",
+                  "    pm.expect(arr.length).to.be.at.least(3);",
+                  "});",
+                  "if (arr.length > 0) {",
+                  "    pm.collectionVariables.set('myHouseId', arr[0]._id);",
+                  "    pm.collectionVariables.set('houseId', arr[0]._id);",
+                  "    console.log('赵建国房源: ' + arr.length + '套');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/houses/my", "host": ["{{baseUrl}}"], "path": ["houses", "my"] }
+          }
+        },
+        {
+          "name": "POST 发布新房源 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('status = pending', () => pm.expect(json.status).to.eql('pending'));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('newHouseId', json._id);",
+                  "    console.log('✅ 新房源: ' + json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"测试房源-{{$randomInt}}\",\"area\":\"朝阳区\",\"address\":\"北京市朝阳区测试路88号\",\"rent\":4200,\"deposit\":4200,\"type\":\"两室一厅\",\"size\":75,\"floor\":\"8层/18层\",\"facilities\":[\"WIFI\",\"空调\",\"冰箱\",\"洗衣机\"],\"description\":\"自动化测试房源\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/houses", "host": ["{{baseUrl}}"], "path": ["houses"] }
+          }
+        },
+        {
+          "name": "POST 发布新房源 — 缺少必填字段",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\":\"只有标题\"}" },
+            "url": { "raw": "{{baseUrl}}/houses", "host": ["{{baseUrl}}"], "path": ["houses"] }
+          }
+        },
+        {
+          "name": "POST 发布新房源 — rent 为负数",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));",
+                  "pm.test('消息含\"租金\"', () => pm.expect(pm.response.json().message).to.include('租金'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\":\"负租金\",\"area\":\"测试区\",\"address\":\"测试地址\",\"rent\":-100,\"type\":\"一室一厅\",\"size\":50}" },
+            "url": { "raw": "{{baseUrl}}/houses", "host": ["{{baseUrl}}"], "path": ["houses"] }
+          }
+        },
+        {
+          "name": "PUT 编辑房源 — 自有房源 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('title 已更新', () => pm.expect(pm.response.json().title).to.include('已编辑'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\":\"测试房源-已编辑\",\"rent\":4500}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{newHouseId}}", "host": ["{{baseUrl}}"], "path": ["houses", "{{newHouseId}}"] }
+          }
+        },
+        {
+          "name": "PUT 编辑房源 — 钱小梅改赵建国的房源 (越权)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));",
+                  "pm.test('消息含\"无权\"', () => pm.expect(pm.response.json().message).to.include('无权'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlord2Token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\":\"越权修改\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{newHouseId}}", "host": ["{{baseUrl}}"], "path": ["houses", "{{newHouseId}}"] }
+          }
+        },
+        {
+          "name": "PUT 下架房源 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('消息=已下架', () => pm.expect(pm.response.json().message).to.eql('已下架'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"offline\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{newHouseId}}/status", "host": ["{{baseUrl}}"], "path": ["houses", "{{newHouseId}}", "status"] }
+          }
+        },
+        {
+          "name": "PUT 上架/下架 — 无效状态值",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));",
+                  "pm.test('消息含\"无效\"', () => pm.expect(pm.response.json().message).to.include('无效'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"garbage\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{newHouseId}}/status", "host": ["{{baseUrl}}"], "path": ["houses", "{{newHouseId}}", "status"] }
+          }
+        },
+        {
+          "name": "DELETE 软删除房源 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('消息=房源已下线', () => pm.expect(pm.response.json().message).to.eql('房源已下线'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/houses/{{newHouseId}}", "host": ["{{baseUrl}}"], "path": ["houses", "{{newHouseId}}"] }
+          }
+        },
+        {
+          "name": "GET 全部房源 (管理员)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/houses/all", "host": ["{{baseUrl}}"], "path": ["houses", "all"] }
+          }
+        },
+        {
+          "name": "GET 待审核房源 (管理员)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('全部 status = pending', () => {",
+                  "    arr.forEach(h => pm.expect(h.status).to.eql('pending'));",
+                  "});",
+                  "if (arr.length > 0) {",
+                  "    pm.collectionVariables.set('pendingHouseId', arr[0]._id);",
+                  "    if (arr.length > 1) pm.collectionVariables.set('pendingHouseId2', arr[1]._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/houses/pending", "host": ["{{baseUrl}}"], "path": ["houses", "pending"] }
+          }
+        },
+        {
+          "name": "PUT 审核通过 (管理员)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = approved', () => pm.expect(pm.response.json().status).to.eql('approved'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"approved\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{pendingHouseId}}/review", "host": ["{{baseUrl}}"], "path": ["houses", "{{pendingHouseId}}", "review"] }
+          }
+        },
+        {
+          "name": "PUT 审核拒绝 (管理员)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('status = rejected', () => pm.expect(json.status).to.eql('rejected'));",
+                  "pm.test('含拒绝原因', () => pm.expect(json.rejectReason).to.eql('照片不清晰'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"rejected\",\"rejectReason\":\"照片不清晰\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{pendingHouseId2}}/review", "host": ["{{baseUrl}}"], "path": ["houses", "{{pendingHouseId2}}", "review"] }
+          }
+        },
+        {
+          "name": "PUT 审核 — 无效状态",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"unknown\"}" },
+            "url": { "raw": "{{baseUrl}}/houses/{{houseId}}/review", "host": ["{{baseUrl}}"], "path": ["houses", "{{houseId}}", "review"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📅 Appointments 预约",
+      "description": "预约模块：列表、创建、确认、拒绝、取消、状态机、越权。使用 Tenant1(13920000001) 操作赵建国的房源。",
+      "item": [
+        {
+          "name": "GET 预约列表（租客视角）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "POST 创建预约 — Tenant1 预约赵建国的房源",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('status = pending', () => pm.expect(json.status).to.eql('pending'));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('appointmentId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"visitDate\":\"2026-07-15\",\"visitTime\":\"10:00\",\"contact\":\"13920000001\",\"remark\":\"周末看房\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "POST 创建预约 — 缺少必填字段",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"houseId\":\"{{houseId}}\"}" },
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "POST 创建第二个预约 (用于拒绝测试)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('appointmentId2', pm.response.json()._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"visitDate\":\"2026-07-16\",\"visitTime\":\"15:00\",\"contact\":\"13920000001\",\"remark\":\"工作日看房\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "POST 创建第三个预约 (用于取消测试)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('appointmentId3', pm.response.json()._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"visitDate\":\"2026-07-20\",\"visitTime\":\"09:00\",\"contact\":\"13920000001\",\"remark\":\"取消测试\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "PUT 确认预约 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = confirmed', () => pm.expect(pm.response.json().status).to.eql('confirmed'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/appointments/{{appointmentId}}/confirm", "host": ["{{baseUrl}}"], "path": ["appointments", "{{appointmentId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "PUT 确认预约 — 重复确认 (状态机)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400（已确认不可再确认）', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/appointments/{{appointmentId}}/confirm", "host": ["{{baseUrl}}"], "path": ["appointments", "{{appointmentId}}", "confirm"] }
+          }
+        },
+        {
+          "name": "PUT 拒绝预约 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('status = rejected', () => pm.expect(json.status).to.eql('rejected'));",
+                  "pm.test('含拒绝原因', () => pm.expect(json.rejectReason).to.eql('房屋已出租'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"reason\":\"房屋已出租\"}" },
+            "url": { "raw": "{{baseUrl}}/appointments/{{appointmentId2}}/reject", "host": ["{{baseUrl}}"], "path": ["appointments", "{{appointmentId2}}", "reject"] }
+          }
+        },
+        {
+          "name": "PUT 取消预约 — 本人 (Tenant1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = cancelled', () => pm.expect(pm.response.json().status).to.eql('cancelled'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/appointments/{{appointmentId3}}/cancel", "host": ["{{baseUrl}}"], "path": ["appointments", "{{appointmentId3}}", "cancel"] }
+          }
+        },
+        {
+          "name": "PUT 取消预约 — Tenant2 取 Tenant1 的预约 (越权)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenant2Token}}" }],
+            "url": { "raw": "{{baseUrl}}/appointments/{{appointmentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["appointments", "{{appointmentId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 Contracts 合同",
+      "description": "合同模块：列表、创建、详情、签署（双方/状态机）、终止、越权。赵建国 vs Tenant1。",
+      "item": [
+        {
+          "name": "GET 合同列表（房东视角）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts", "host": ["{{baseUrl}}"], "path": ["contracts"] }
+          }
+        },
+        {
+          "name": "POST 创建合同 — 赵建国 vs Tenant1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('status = draft', () => pm.expect(json.status).to.eql('draft'));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('contractId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tenantId\":\"{{tenantId}}\",\"houseId\":\"{{houseId}}\",\"startDate\":\"2026-08-01\",\"endDate\":\"2027-07-31\",\"rent\":3500,\"deposit\":3500}"
+            },
+            "url": { "raw": "{{baseUrl}}/contracts", "host": ["{{baseUrl}}"], "path": ["contracts"] }
+          }
+        },
+        {
+          "name": "POST 创建合同 — 缺少必填字段",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"tenantId\":\"{{tenantId}}\"}" },
+            "url": { "raw": "{{baseUrl}}/contracts", "host": ["{{baseUrl}}"], "path": ["contracts"] }
+          }
+        },
+        {
+          "name": "GET 合同详情 (赵建国查看)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('含 populate 数据', () => {",
+                  "    pm.expect(json).to.have.property('tenantId');",
+                  "    pm.expect(json).to.have.property('landlordId');",
+                  "    pm.expect(json).to.have.property('houseId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}"] }
+          }
+        },
+        {
+          "name": "GET 合同详情 — OtherTenant 查看 (越权)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{otherTenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}"] }
+          }
+        },
+        {
+          "name": "PUT 签署合同 — 赵建国 (房东先签)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('signedByLandlord = true', () => pm.expect(json.signedByLandlord).to.be.true);",
+                  "pm.test('status = pending_sign', () => pm.expect(json.status).to.eql('pending_sign'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}/sign", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}", "sign"] }
+          }
+        },
+        {
+          "name": "PUT 签署合同 — Tenant1 (租客后签, 双方完成)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('signedByTenant = true', () => pm.expect(json.signedByTenant).to.be.true);",
+                  "pm.test('status = signed (双方完成)', () => pm.expect(json.status).to.eql('signed'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}/sign", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}", "sign"] }
+          }
+        },
+        {
+          "name": "PUT 签署合同 — 重复签署 (状态机)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));",
+                  "pm.test('消息含\"已签署\"', () => pm.expect(pm.response.json().message).to.include('已签署'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}/sign", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}", "sign"] }
+          }
+        },
+        {
+          "name": "PUT 签署合同 — OtherTenant 试图签署 (越权)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{otherTenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}/sign", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}", "sign"] }
+          }
+        },
+        {
+          "name": "PUT 终止合同 (Tenant1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = terminated', () => pm.expect(pm.response.json().status).to.eql('terminated'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/contracts/{{contractId}}/terminate", "host": ["{{baseUrl}}"], "path": ["contracts", "{{contractId}}", "terminate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 Finance 财务",
+      "description": "财务模块：列表、创建。使用赵建国。",
+      "item": [
+        {
+          "name": "GET 财务记录列表 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/finance", "host": ["{{baseUrl}}"], "path": ["finance"] }
+          }
+        },
+        {
+          "name": "POST 添加财务记录 (赵建国)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('含完整字段', () => {",
+                  "    pm.expect(json).to.have.property('amount');",
+                  "    pm.expect(json).to.have.property('month');",
+                  "    pm.expect(json).to.have.property('landlordId');",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('financeId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"contractId\":\"{{contractId}}\",\"amount\":3500,\"month\":\"2026-08\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/finance", "host": ["{{baseUrl}}"], "path": ["finance"] }
+          }
+        },
+        {
+          "name": "POST 添加财务记录 — 缺少必填字段",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"amount\":3500}" },
+            "url": { "raw": "{{baseUrl}}/finance", "host": ["{{baseUrl}}"], "path": ["finance"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Reviews 评价",
+      "description": "评价模块：房源评价、我的评价、创建、score边界、重复评价、隐藏。使用 Tenant1。",
+      "item": [
+        {
+          "name": "GET 房源评价（公开）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('含 reviews + averageScore + total', () => {",
+                  "    pm.expect(json.reviews).to.be.an('array');",
+                  "    pm.expect(json.averageScore).to.be.a('number');",
+                  "    pm.expect(json.total).to.be.a('number');",
+                  "});",
+                  "pm.test('averageScore 在 0-5 之间', () => {",
+                  "    pm.expect(json.averageScore).to.be.at.least(0).and.at.most(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/reviews/house/{{houseId}}", "host": ["{{baseUrl}}"], "path": ["reviews", "house", "{{houseId}}"] }
+          }
+        },
+        {
+          "name": "GET 我的评价（Tenant1）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回数组', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/reviews/my", "host": ["{{baseUrl}}"], "path": ["reviews", "my"] }
+          }
+        },
+        {
+          "name": "POST 创建评价 (Tenant1, score=5)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('score = 5', () => pm.expect(json.score).to.eql(5));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('reviewId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"score\":5,\"content\":\"房间干净整洁，房东赵建国很热情！\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/reviews", "host": ["{{baseUrl}}"], "path": ["reviews"] }
+          }
+        },
+        {
+          "name": "POST 创建评价 — score=10 超出范围",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));",
+                  "pm.test('消息含\"范围\"', () => pm.expect(pm.response.json().message).to.include('范围'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"houseId\":\"{{houseId}}\",\"score\":10,\"content\":\"超出范围\"}" },
+            "url": { "raw": "{{baseUrl}}/reviews", "host": ["{{baseUrl}}"], "path": ["reviews"] }
+          }
+        },
+        {
+          "name": "POST 创建评价 — 重复评价 (同一租客同房源)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));",
+                  "pm.test('消息含\"已经评价\"', () => pm.expect(pm.response.json().message).to.include('已经评价'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"houseId\":\"{{houseId}}\",\"score\":3,\"content\":\"重复\"}" },
+            "url": { "raw": "{{baseUrl}}/reviews", "host": ["{{baseUrl}}"], "path": ["reviews"] }
+          }
+        },
+        {
+          "name": "PUT 切换评价可见性（管理员）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('visible 为 boolean', () => pm.expect(typeof pm.response.json().visible).to.eql('boolean'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/reviews/{{reviewId}}/hide", "host": ["{{baseUrl}}"], "path": ["reviews", "{{reviewId}}", "hide"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Admin 管理",
+      "description": "管理模块：用户管理、统计、系统设置。使用 admin(13834080231)。",
+      "item": [
+        {
+          "name": "GET 用户列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('返回数组', () => pm.expect(arr).to.be.an('array'));",
+                  "const target = arr.find(u => u.role !== 'admin');",
+                  "if (target) pm.collectionVariables.set('targetUserId', target._id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "GET 用户列表 — 按角色筛选",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('全部 role = tenant', () => {",
+                  "    pm.response.json().forEach(u => pm.expect(u.role).to.eql('tenant'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?role=tenant",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [{ "key": "role", "value": "tenant" }]
+            }
+          }
+        },
+        {
+          "name": "PUT 禁用用户",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = disabled', () => pm.expect(pm.response.json().status).to.eql('disabled'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"disabled\"}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{targetUserId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{targetUserId}}", "status"] }
+          }
+        },
+        {
+          "name": "PUT 启用用户",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = active', () => pm.expect(pm.response.json().status).to.eql('active'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"active\"}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{targetUserId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{targetUserId}}", "status"] }
+          }
+        },
+        {
+          "name": "PUT 启用/禁用 — 无效状态值",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"status\":\"banned\"}" },
+            "url": { "raw": "{{baseUrl}}/admin/users/{{targetUserId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{targetUserId}}", "status"] }
+          }
+        },
+        {
+          "name": "GET 统计面板",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('含完整统计字段', () => {",
+                  "    pm.expect(json).to.have.property('userCount');",
+                  "    pm.expect(json).to.have.property('houseCount');",
+                  "    pm.expect(json).to.have.property('appointmentCount');",
+                  "    pm.expect(json).to.have.property('contractCount');",
+                  "    pm.expect(json).to.have.property('popularAreas');",
+                  "    pm.expect(json).to.have.property('rentRanges');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+          }
+        },
+        {
+          "name": "GET 系统设置",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回对象', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/settings", "host": ["{{baseUrl}}"], "path": ["admin", "settings"] }
+          }
+        },
+        {
+          "name": "PUT 更新系统设置",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 200', () => pm.response.to.have.status(200));",
+                  "pm.test('含新设置', () => pm.expect(pm.response.json()).to.have.property('siteName'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"siteName\":\"智慧房屋租赁系统\",\"maxRent\":\"20000\"}" },
+            "url": { "raw": "{{baseUrl}}/admin/settings", "host": ["{{baseUrl}}"], "path": ["admin", "settings"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔒 权限边界测试",
+      "description": "跨模块权限验证：未登录→401，角色越权→403",
+      "item": [
+        {
+          "name": "未登录 401 — GET /appointments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "未登录 401 — GET /contracts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/contracts", "host": ["{{baseUrl}}"], "path": ["contracts"] }
+          }
+        },
+        {
+          "name": "租客→房东接口 403 — GET /houses/my",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/houses/my", "host": ["{{baseUrl}}"], "path": ["houses", "my"] }
+          }
+        },
+        {
+          "name": "租客→管理接口 403 — GET /admin/users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users", "host": ["{{baseUrl}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "房东→管理接口 403 — GET /admin/stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{landlordToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+          }
+        },
+        {
+          "name": "房东→租客接口 403 — POST /appointments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{landlordToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"houseId\":\"{{houseId}}\",\"visitDate\":\"2026-07-10\",\"visitTime\":\"14:00\",\"contact\":\"13800000000\"}"
+            },
+            "url": { "raw": "{{baseUrl}}/appointments", "host": ["{{baseUrl}}"], "path": ["appointments"] }
+          }
+        },
+        {
+          "name": "租客→房东接口 403 — GET /finance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('状态码 403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "url": { "raw": "{{baseUrl}}/finance", "host": ["{{baseUrl}}"], "path": ["finance"] }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "adminToken", "value": "" },
+    { "key": "adminId", "value": "" },
+    { "key": "landlordToken", "value": "" },
+    { "key": "landlordId", "value": "" },
+    { "key": "landlord2Token", "value": "" },
+    { "key": "landlord2Id", "value": "" },
+    { "key": "tenantToken", "value": "" },
+    { "key": "tenantId", "value": "" },
+    { "key": "tenantPhone", "value": "13920000001" },
+    { "key": "tenant2Token", "value": "" },
+    { "key": "tenant2Id", "value": "" },
+    { "key": "otherTenantToken", "value": "" },
+    { "key": "otherTenantId", "value": "" },
+    { "key": "houseId", "value": "" },
+    { "key": "newHouseId", "value": "" },
+    { "key": "myHouseId", "value": "" },
+    { "key": "pendingHouseId", "value": "" },
+    { "key": "pendingHouseId2", "value": "" },
+    { "key": "appointmentId", "value": "" },
+    { "key": "appointmentId2", "value": "" },
+    { "key": "appointmentId3", "value": "" },
+    { "key": "contractId", "value": "" },
+    { "key": "financeId", "value": "" },
+    { "key": "reviewId", "value": "" },
+    { "key": "targetUserId", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('baseUrl')) {",
+          "    pm.collectionVariables.set('baseUrl', 'http://localhost:3000/api');",
+          "}"
+        ]
+      }
+    }
+  ]
+}
