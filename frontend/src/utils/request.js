@@ -20,9 +20,11 @@ request.interceptors.response.use(
     if (error.response) {
       const { status, data } = error.response
       if (status === 401) {
-        // 登录页的 401 显示错误信息，不跳转
-        if (window.location.pathname === '/login' || window.location.pathname === '/register') {
-          ElMessage.error(data?.message || '账号或密码错误')
+        const isLoginPage = window.location.pathname === '/login'
+          || window.location.pathname.startsWith('/login/')
+          || window.location.pathname === '/register'
+        if (isLoginPage) {
+          // 登录页自己处理错误展示，不在此处弹 toast
         } else {
           localStorage.removeItem('token')
           localStorage.removeItem('user')
