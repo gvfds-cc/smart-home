@@ -50,6 +50,24 @@
         </div>
       </div>
     </div>
+    <!-- 错误大弹窗 -->
+    <Teleport to="body">
+      <Transition name="dialog-fade">
+        <div v-if="errorVisible" class="error-overlay" @click.self="errorVisible = false">
+          <div class="error-dialog">
+            <div class="error-icon-wrap">
+              <svg width="72" height="72" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="11" stroke="#e74c3c" stroke-width="2" />
+                <path d="M12 7v6M12 16.5v.5" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2 class="error-title">登录失败</h2>
+            <p class="error-msg">{{ errorMsg }}</p>
+            <button class="error-close-btn" @click="errorVisible = false">知道了</button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -65,6 +83,8 @@ const route = useRoute()
 const auth = useAuthStore()
 const formRef = ref(null)
 const loading = ref(false)
+const errorVisible = ref(false)
+const errorMsg = ref('账号或密码错误，请重试')
 
 // Get role from route param (e.g. /login/landlord, /login/admin)
 const roleMap = { landlord: '房东', admin: '管理员' }
@@ -119,8 +139,9 @@ async function doLogin() {
     ElMessage.success('登录成功')
     const target = { tenant: '/tenant/appointments', landlord: '/landlord/houses', admin: '/admin/users' }
     router.push(target[form.role] || '/')
-  } catch {
-    // handled by interceptor
+  } catch (err) {
+    errorMsg.value = err?.response?.data?.message || '账号或密码错误，请重试'
+    errorVisible.value = true
   } finally {
     loading.value = false
   }
@@ -442,5 +463,91 @@ async function doLogin() {
     font-weight: 500;
     text-decoration: none;
   }
+}
+
+/* ── 错误大弹窗 ── */
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.error-dialog {
+  background: #fff;
+  border-radius: 20px;
+  padding: 48px 44px 36px;
+  width: 420px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: dialogPopIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes dialogPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.error-icon-wrap {
+  margin-bottom: 20px;
+  animation: errorPulse 0.6s ease-in-out;
+}
+
+@keyframes errorPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.error-title {
+  margin: 0 0 14px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d4359;
+}
+
+.error-msg {
+  margin: 0 0 32px;
+  font-size: 16px;
+  color: #7c8b95;
+  line-height: 1.6;
+}
+
+.error-close-btn {
+  width: 180px;
+  height: 46px;
+  border-radius: 40px;
+  border: none;
+  background: rgb(59, 72, 89);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: background 0.2s;
+}
+
+.error-close-btn:hover {
+  background: rgb(45, 58, 75);
+}
+
+/* 弹窗淡入淡出过渡 */
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
 }
 </style>
