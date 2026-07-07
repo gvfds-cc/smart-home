@@ -91,6 +91,18 @@ router.post('/', authenticate, authorize('landlord'), async (req, res, next) => 
       return res.status(400).json({ message: '请填写必填字段' });
     }
 
+    // 开始时间不能早于今天
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(startDate) < today) {
+      return res.status(400).json({ message: '合同开始时间不能早于今天' });
+    }
+
+    // 结束时间不能早于开始时间
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({ message: '合同结束时间不能早于开始时间' });
+    }
+
     const house = await House.findById(houseId);
     if (!house) {
       return res.status(404).json({ message: '房源不存在' });
@@ -154,6 +166,18 @@ router.post('/from-appointment/:appointmentId', authenticate, authorize('landlor
     const { startDate, endDate, rent, deposit } = req.body;
     if (!startDate || !endDate || !rent || deposit === undefined) {
       return res.status(400).json({ message: '请填写必填字段' });
+    }
+
+    // 开始时间不能早于今天
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(startDate) < today) {
+      return res.status(400).json({ message: '合同开始时间不能早于今天' });
+    }
+
+    // 结束时间不能早于开始时间
+    if (new Date(endDate) < new Date(startDate)) {
+      return res.status(400).json({ message: '合同结束时间不能早于开始时间' });
     }
 
     const house = appointment.houseId;
@@ -248,6 +272,20 @@ router.put('/:id', authenticate, authorize('landlord'), async (req, res, next) =
     }
     if (startDate) changes.startDate = startDate;
     if (endDate) changes.endDate = endDate;
+
+    // 验证日期：开始时间不能早于今天
+    const effectiveStartDate = changes.startDate || contract.startDate;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (changes.startDate && new Date(changes.startDate) < today) {
+      return res.status(400).json({ message: '合同开始时间不能早于今天' });
+    }
+
+    // 验证日期：结束时间不能早于开始时间
+    const effectiveEndDate = changes.endDate || contract.endDate;
+    if (new Date(effectiveEndDate) < new Date(effectiveStartDate)) {
+      return res.status(400).json({ message: '合同结束时间不能早于开始时间' });
+    }
 
     if (Object.keys(changes).length === 0) {
       return res.status(400).json({ message: '没有需要更新的字段' });

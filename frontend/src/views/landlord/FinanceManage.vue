@@ -45,9 +45,6 @@
       <div class="chart-header">
         <span class="chart-title">收入趋势</span>
         <el-radio-group v-model="granularity" size="small">
-          <el-radio-button value="month">月</el-radio-button>
-          <el-radio-button value="quarter">季</el-radio-button>
-          <el-radio-button value="year">年</el-radio-button>
         </el-radio-group>
       </div>
       <div ref="chartRef" class="chart-container"></div>
