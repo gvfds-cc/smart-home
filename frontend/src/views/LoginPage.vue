@@ -158,7 +158,7 @@ async function doLogin() {
 .box {
   width: 100vw;
   height: 100vh;
-  background-color: rgb(255, 255, 255);
+  background-color: rgb(255, 252, 252);
   position: relative;
 }
 
