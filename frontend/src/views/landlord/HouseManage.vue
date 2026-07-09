@@ -80,12 +80,19 @@
             @click="toggleStatus(row._id || row.id, 'offline')"
           >下架</el-button>
           <el-button
-            v-if="row.status === 'offline' || row.status === 'rejected'"
+            v-if="row.status === 'offline'"
             size="small"
             type="success"
             class="action-btn"
             @click="toggleStatus(row._id || row.id, 'approved')"
           >上架</el-button>
+          <el-button
+            v-if="row.status === 'rejected'"
+            size="small"
+            type="success"
+            class="action-btn"
+            @click="toggleStatus(row._id || row.id, 'pending')"
+          >重新提交</el-button>
         </template>
       </el-table-column>
     </el-table>

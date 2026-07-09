@@ -242,7 +242,7 @@ router.put('/:id/status', authenticate, authorize('landlord'), async (req, res, 
   try {
     const { status } = req.body;
 
-    if (!['approved', 'offline'].includes(status)) {
+    if (!['approved', 'offline', 'pending'].includes(status)) {
       return res.status(400).json({ message: '状态值无效' });
     }
 
@@ -252,6 +252,11 @@ router.put('/:id/status', authenticate, authorize('landlord'), async (req, res, 
     }
     if (house.landlordId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: '无权操作此房源' });
+    }
+
+    // 未通过的房源不能直接上架，只能重新提交审核
+    if (status === 'approved' && house.status === 'rejected') {
+      return res.status(400).json({ message: '未通过的房源需要修改后重新提交审核，不能直接上架' });
     }
 
     // 上架前检查是否有未到期的合同
@@ -268,7 +273,13 @@ router.put('/:id/status', authenticate, authorize('landlord'), async (req, res, 
 
     house.status = status;
     await house.save();
-    res.json({ message: status === 'approved' ? '已上架' : '已下架' });
+    
+    const messages = {
+      approved: '已上架',
+      offline: '已下架',
+      pending: '已重新提交审核'
+    };
+    res.json({ message: messages[status] });
   } catch (err) {
     next(err);
   }
