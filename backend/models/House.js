@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const houseSchema = new mongoose.Schema({
   landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  landlordName: { type: String, required: true, trim: true },
-  landlordPhone: { type: String, required: true, trim: true },
+  landlordName: { type: String, default: '', trim: true },
+  landlordPhone: { type: String, default: '', trim: true },
   title: { type: String, required: true, trim: true },
   area: { type: String, required: true, trim: true },
   address: { type: String, required: true, trim: true },
